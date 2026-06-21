@@ -60,7 +60,7 @@
   });
 
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") {
+    if (settings.enabled && document.visibilityState === "visible") {
       requestHydration();
     }
   });
@@ -101,45 +101,51 @@
   }
 
   function handleBackgroundMessage(message) {
-    if (!active) {
-      return;
-    }
-
-    if (message?.type === "lt-overlay:settings") {
-      settings = normalizeSettings({ ...settings, ...message.settings });
-      applySettings();
-      return;
-    }
-
-    if (message?.type === "lt-overlay:status") {
-      applyStatus(message.status);
-      return;
-    }
-
-    if (message?.type === "lt-overlay:comment") {
-      if (!settings.enabled) {
+    try {
+      if (!active) {
         return;
       }
-      if (message.comment?.text) {
-        if (isDuplicateComment(message.comment)) {
+
+      if (message?.type === "lt-overlay:settings") {
+        settings = normalizeSettings({ ...settings, ...message.settings });
+        applySettings();
+        return;
+      }
+
+      if (message?.type === "lt-overlay:status") {
+        applyStatus(message.status);
+        return;
+      }
+
+      if (message?.type === "lt-overlay:comment") {
+        if (!settings.enabled) {
           return;
         }
-        enqueueComment(message.comment);
-      }
-      return;
-    }
-
-    if (message?.type === "lt-overlay:hydrate") {
-      if (!settings.enabled) {
-        clearComments();
+        if (message.comment?.text) {
+          if (isDuplicateComment(message.comment)) {
+            return;
+          }
+          enqueueComment(message.comment);
+        }
         return;
       }
-      hydrateComments(message.comments || []);
-      return;
-    }
 
-    if (message?.type === "lt-overlay:clear") {
-      clearComments();
+      if (message?.type === "lt-overlay:hydrate") {
+        if (!settings.enabled) {
+          clearComments();
+          return;
+        }
+        hydrateComments(message.comments || []);
+        return;
+      }
+
+      if (message?.type === "lt-overlay:clear") {
+        clearComments();
+      }
+    } catch (error) {
+      if (isExtensionContextInvalidated(error)) {
+        deactivateStaleContext();
+      }
     }
   }
 
@@ -152,6 +158,9 @@
 
         settings = normalizeSettings({ ...settings, ...response.settings });
         applySettings();
+        if (!settings.enabled) {
+          return;
+        }
         applyStatus(response.status);
         hydrateComments(response.comments || []);
       });

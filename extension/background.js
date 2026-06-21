@@ -53,11 +53,11 @@ chrome.runtime.onConnect.addListener((port) => {
   pagePorts.add(port);
   port.postMessage({ type: "lt-overlay:settings", settings });
   port.postMessage({ type: "lt-overlay:status", status: getStatus() });
-  port.postMessage({
-    type: "lt-overlay:hydrate",
-    comments: getActiveOverlayComments(),
-  });
   if (settings.enabled) {
+    port.postMessage({
+      type: "lt-overlay:hydrate",
+      comments: getActiveOverlayComments(),
+    });
     ensureConnected();
   }
 
@@ -84,7 +84,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     sendResponse({
       settings,
       status: getStatus(),
-      comments: getActiveOverlayComments(),
+      comments: settings.enabled ? getActiveOverlayComments() : [],
     });
     return false;
   }
