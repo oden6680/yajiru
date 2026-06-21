@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Comment Overlay</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <h1>Comment Overlay</h1>
+          <p id="statusText">状態を確認中...</p>
+        </div>
+        <span id="saveStatus" role="status" aria-live="polite"></span>
+      </header>
+
+      <form id="settingsForm">
+        <section>
+          <h2>表示</h2>
+          <div class="grid compact-grid">
+            <label>
+              <span>文字</span>
+              <input id="fontSize" name="fontSize" type="number" min="16" max="72" step="1">
+            </label>
+
+            <label>
+              <span>秒数</span>
+              <input id="durationSec" name="durationSec" type="number" min="4" max="20" step="0.5">
+            </label>
+
+            <label>
+              <span>レーン</span>
+              <input id="laneCount" name="laneCount" type="number" min="3" max="16" step="1">
+            </label>
+
+            <label>
+              <span>上限</span>
+              <input id="maxComments" name="maxComments" type="number" min="10" max="120" step="1">
+            </label>
+
+            <label>
+              <span>透明度</span>
+              <input id="opacity" name="opacity" type="number" min="0.3" max="1" step="0.05">
+            </label>
+
+            <label>
+              <span>背景濃度</span>
+              <input id="pillOpacity" name="pillOpacity" type="number" min="0.1" max="0.8" step="0.05">
+            </label>
+          </div>
+        </section>
+
+        <section>
+          <h2>色</h2>
+          <div class="toggle-row">
+            <label class="toggle">
+              <input id="useUserColors" name="useUserColors" type="checkbox">
+              <span>ユーザー色</span>
+            </label>
+
+            <label class="toggle">
+              <input id="showPill" name="showPill" type="checkbox">
+              <span>背景ピル</span>
+            </label>
+          </div>
+
+          <div class="color-grid">
+            <label class="color-row">
+              <span>文字</span>
+              <input id="textColor" name="textColor" type="color">
+              <div class="swatches" data-target="textColor"></div>
+            </label>
+
+            <label class="color-row">
+              <span>縁取り</span>
+              <input id="outlineColor" name="outlineColor" type="color">
+              <div class="swatches" data-target="outlineColor"></div>
+            </label>
+
+            <label class="color-row">
+              <span>背景</span>
+              <input id="pillColor" name="pillColor" type="color">
+              <div class="swatches" data-target="pillColor"></div>
+            </label>
+          </div>
+
+          <div class="preview" aria-label="表示プレビュー">
+            <span id="previewText">コメントのプレビューです</span>
+          </div>
+        </section>
+
+        <footer>
+          <button id="saveButton" type="submit">保存</button>
+          <button id="previewButton" type="button">テスト</button>
+          <button id="clearButton" type="button">消去</button>
+          <button id="reconnectButton" type="button">再接続</button>
+        </footer>
+      </form>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>
