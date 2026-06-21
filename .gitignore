@@ -1,0 +1,26 @@
+.DS_Store
+Thumbs.db
+
+# Dependencies
+node_modules/
+server/node_modules/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+server/.env
+server/.env.*
+!server/.env.example
+
+# Generated packages and store submission assets
+*.zip
+*.crx
+*.pem
+store-assets/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
