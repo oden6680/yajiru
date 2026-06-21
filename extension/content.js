@@ -1,5 +1,6 @@
 (() => {
   const DEFAULT_SETTINGS = {
+    enabled: false,
     wsUrl: "ws://localhost:8080/ws",
     fontSize: 34,
     durationSec: 8,
@@ -44,13 +45,13 @@
     pointerEvents: "none",
     background: "transparent"
   });
+  stage.hidden = true;
 
   const badge = document.createElement("div");
   badge.className = "lt-comment-overlay-badge";
   badge.hidden = true;
   stage.appendChild(badge);
   document.documentElement.appendChild(stage);
-  showBadge("接続中...");
 
   connectToBackground();
 
@@ -87,7 +88,9 @@
         return;
       }
       port = null;
-      showBadge("接続中...");
+      if (settings.enabled) {
+        showBadge("接続中...");
+      }
       schedulePortReconnect();
     });
   }
@@ -114,6 +117,9 @@
     }
 
     if (message?.type === "lt-overlay:comment") {
+      if (!settings.enabled) {
+        return;
+      }
       if (message.comment?.text) {
         if (isDuplicateComment(message.comment)) {
           return;
@@ -124,6 +130,10 @@
     }
 
     if (message?.type === "lt-overlay:hydrate") {
+      if (!settings.enabled) {
+        clearComments();
+        return;
+      }
       hydrateComments(message.comments || []);
       return;
     }
@@ -154,6 +164,7 @@
 
   function normalizeSettings(input) {
     return {
+      enabled: Boolean(input.enabled),
       wsUrl: String(input.wsUrl || DEFAULT_SETTINGS.wsUrl).trim() || DEFAULT_SETTINGS.wsUrl,
       fontSize: clampNumber(input.fontSize, 16, 72, DEFAULT_SETTINGS.fontSize),
       durationSec: clampNumber(input.durationSec, 4, 20, DEFAULT_SETTINGS.durationSec),
@@ -183,12 +194,27 @@
   }
 
   function applySettings() {
+    stage.hidden = !settings.enabled;
+    if (!settings.enabled) {
+      clearComments();
+      hideBadge();
+      return;
+    }
+
     stage.style.setProperty("--lt-comment-font-size", `${settings.fontSize}px`);
     stage.style.setProperty("--lt-comment-opacity", String(settings.opacity));
     stage.style.setProperty("--lt-comment-outline-color", settings.outlineColor);
   }
 
   function applyStatus(status) {
+    if (!settings.enabled || status?.enabled === false) {
+      clearComments();
+      hideBadge();
+      stage.hidden = true;
+      return;
+    }
+
+    stage.hidden = false;
     state = status?.state || STATE.DISCONNECTED;
     currentCode = status?.code || "";
 

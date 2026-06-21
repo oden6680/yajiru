@@ -1,6 +1,7 @@
 const RELAY_WS_URL = "wss://co-oden.servepics.com/ws";
 
 const DEFAULT_SETTINGS = {
+  enabled: false,
   wsUrl: RELAY_WS_URL,
   fontSize: 34,
   durationSec: 8,
@@ -32,16 +33,16 @@ let statusMessage = "接続中...";
 const pagePorts = new Set();
 let activeOverlayComments = [];
 
-loadSettings().then(() => {
-  connect();
+const settingsReady = loadSettings().then(() => {
+  syncConnectionState();
 });
 
 chrome.runtime.onStartup.addListener(() => {
-  connect();
+  settingsReady.then(() => syncConnectionState());
 });
 
 chrome.runtime.onInstalled.addListener(() => {
-  connect();
+  settingsReady.then(() => syncConnectionState());
 });
 
 chrome.runtime.onConnect.addListener((port) => {
@@ -56,7 +57,9 @@ chrome.runtime.onConnect.addListener((port) => {
     type: "lt-overlay:hydrate",
     comments: getActiveOverlayComments(),
   });
-  ensureConnected();
+  if (settings.enabled) {
+    ensureConnected();
+  }
 
   port.onDisconnect.addListener(() => {
     pagePorts.delete(port);
@@ -65,7 +68,9 @@ chrome.runtime.onConnect.addListener((port) => {
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === "lt-overlay:getStatus") {
-    ensureConnected();
+    if (settings.enabled) {
+      ensureConnected();
+    }
     sendResponse(getStatus());
     return false;
   }
@@ -85,15 +90,22 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message?.type === "lt-overlay:updateSettings") {
+    const wasEnabled = settings.enabled;
     settings = normalizeSettings({ ...settings, ...message.settings });
     chrome.storage.sync.set(settings, () => {
       broadcast({ type: "lt-overlay:settings", settings });
+      syncConnectionState({ forceReconnect: settings.enabled && !wasEnabled });
       sendResponse(getStatus());
     });
     return true;
   }
 
   if (message?.type === "lt-overlay:previewComment") {
+    if (!settings.enabled) {
+      sendResponse(getStatus());
+      return false;
+    }
+
     dispatchComment({
       id: `preview_${Date.now()}`,
       user: "preview",
@@ -113,6 +125,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message?.type === "lt-overlay:reconnect") {
+    if (!settings.enabled) {
+      sendResponse(getStatus());
+      return false;
+    }
+
     reconnectAttempt = 0;
     connect();
     sendResponse(getStatus());
@@ -133,6 +150,7 @@ function loadSettings() {
 
 function normalizeSettings(input) {
   return {
+    enabled: Boolean(input.enabled),
     wsUrl: RELAY_WS_URL,
     fontSize: clampNumber(input.fontSize, 16, 72, DEFAULT_SETTINGS.fontSize),
     durationSec: clampNumber(input.durationSec, 4, 20, DEFAULT_SETTINGS.durationSec),
@@ -162,12 +180,21 @@ function normalizeColor(value, fallback) {
 }
 
 function ensureConnected() {
+  if (!settings.enabled) {
+    return;
+  }
+
   if (!ws || ws.readyState === WebSocket.CLOSED) {
     connect();
   }
 }
 
 function connect() {
+  if (!settings.enabled) {
+    disableConnection();
+    return;
+  }
+
   clearTimeout(reconnectTimer);
   closeSocket();
   setStatus(STATE.DISCONNECTED, "", "接続中...");
@@ -240,7 +267,35 @@ function closeSocket() {
   socket.close();
 }
 
+function syncConnectionState({ forceReconnect = false } = {}) {
+  if (!settings.enabled) {
+    disableConnection();
+    return;
+  }
+
+  if (forceReconnect) {
+    reconnectAttempt = 0;
+    connect();
+    return;
+  }
+
+  ensureConnected();
+}
+
+function disableConnection() {
+  clearTimeout(reconnectTimer);
+  reconnectAttempt = 0;
+  activeOverlayComments = [];
+  closeSocket();
+  broadcast({ type: "lt-overlay:clear" });
+  setStatus(STATE.DISCONNECTED, "", "接続OFF");
+}
+
 function scheduleReconnect() {
+  if (!settings.enabled) {
+    return;
+  }
+
   clearTimeout(reconnectTimer);
   const delay = Math.min(10_000, 1000 * 2 ** reconnectAttempt);
   reconnectAttempt += 1;
@@ -254,6 +309,10 @@ function send(payload) {
 }
 
 function handleServerMessage(message) {
+  if (!settings.enabled) {
+    return;
+  }
+
   if (message.type === "code") {
     setStatus(STATE.WAITING, String(message.code || ""), "");
     return;
@@ -298,6 +357,7 @@ function setStatus(nextState, code, message) {
 
 function getStatus() {
   return {
+    enabled: settings.enabled,
     state,
     code: currentCode,
     wsUrl: settings.wsUrl,

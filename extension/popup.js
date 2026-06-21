@@ -1,4 +1,5 @@
 const DEFAULT_SETTINGS = {
+  enabled: false,
   fontSize: 34,
   durationSec: 8,
   laneCount: 8,
@@ -54,6 +55,7 @@ function fillForm(settings) {
 
 function readForm() {
   return {
+    enabled: form.enabled.checked,
     fontSize: Number(form.fontSize.value),
     durationSec: Number(form.durationSec.value),
     laneCount: Number(form.laneCount.value),
@@ -80,8 +82,15 @@ function showSaveStatus(text) {
 }
 
 function renderStatus(status) {
+  updateControls(status);
+
   if (!status) {
     statusText.textContent = "状態を取得できません。拡張機能を再読み込みしてください。";
+    return;
+  }
+
+  if (status.enabled === false) {
+    statusText.textContent = `接続OFF / 表示ページ ${status.connectedPages || 0}`;
     return;
   }
 
@@ -110,6 +119,13 @@ function updatePreview() {
   previewText.style.backgroundColor = settings.showPill
     ? hexToRgba(settings.pillColor, settings.pillOpacity)
     : "transparent";
+}
+
+function updateControls(status) {
+  const enabled = Boolean(status?.enabled ?? form.enabled?.checked);
+  previewButton.disabled = !enabled;
+  clearButton.disabled = !enabled;
+  reconnectButton.disabled = !enabled;
 }
 
 function hexToRgba(color, alpha) {
@@ -154,6 +170,20 @@ async function refresh() {
 }
 
 form.addEventListener("input", updatePreview);
+
+form.enabled.addEventListener("change", async () => {
+  try {
+    const status = await sendToBackground({
+      type: "lt-overlay:updateSettings",
+      settings: readForm()
+    });
+    renderStatus(status);
+    showSaveStatus(form.enabled.checked ? "ON" : "OFF");
+  } catch (_error) {
+    renderStatus(undefined);
+    showSaveStatus("保存失敗");
+  }
+});
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();

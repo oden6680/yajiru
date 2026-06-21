@@ -83,6 +83,13 @@ section {
   padding-top: 1px;
 }
 
+.connection-section {
+  padding: 8px 9px;
+  border: 1px solid #c9d2d8;
+  border-radius: 7px;
+  background: #fff;
+}
+
 label {
   display: grid;
   gap: 3px;
@@ -140,6 +147,47 @@ input:focus {
   grid-template-columns: 15px 1fr;
   align-items: center;
   gap: 6px;
+}
+
+.power-toggle {
+  grid-template-columns: 1fr 40px;
+  align-items: center;
+  gap: 8px;
+  color: #172026;
+  font-size: 12px;
+}
+
+.power-toggle input {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  border: 0;
+  border-radius: 999px;
+  box-sizing: border-box;
+  padding: 0;
+  appearance: none;
+  background: #b9c5cb;
+  cursor: pointer;
+}
+
+.power-toggle input::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 140ms ease;
+}
+
+.power-toggle input:checked {
+  background: #1677a7;
+}
+
+.power-toggle input:checked::before {
+  transform: translateX(18px);
 }
 
 .color-grid {
@@ -237,4 +285,10 @@ footer button:first-child {
 
 button:hover {
   filter: brightness(0.97);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  filter: none;
+  opacity: 0.48;
 }
