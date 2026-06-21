@@ -92,12 +92,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === "lt-overlay:updateSettings") {
     const wasEnabled = settings.enabled;
     settings = normalizeSettings({ ...settings, ...message.settings });
-    chrome.storage.sync.set(settings, () => {
-      broadcast({ type: "lt-overlay:settings", settings });
-      syncConnectionState({ forceReconnect: settings.enabled && !wasEnabled });
-      sendResponse(getStatus());
-    });
-    return true;
+    chrome.storage.sync.set(settings);
+    broadcast({ type: "lt-overlay:settings", settings });
+    syncConnectionState({ forceReconnect: settings.enabled && !wasEnabled });
+    sendResponse(getStatus());
+    return false;
   }
 
   if (message?.type === "lt-overlay:previewComment") {

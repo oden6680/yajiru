@@ -60,7 +60,7 @@
   });
 
   document.addEventListener("visibilitychange", () => {
-    if (settings.enabled && document.visibilityState === "visible") {
+    if (settings.enabled && active && document.visibilityState === "visible") {
       requestHydration();
     }
   });
@@ -150,24 +150,49 @@
   }
 
   function requestHydration() {
+    if (!settings.enabled || !canUseRuntime()) {
+      return;
+    }
+
     try {
       chrome.runtime.sendMessage({ type: "lt-overlay:getHydration" }, (response) => {
-        if (!active || chrome.runtime.lastError || !response) {
-          return;
-        }
+        try {
+          if (!active) {
+            return;
+          }
 
-        settings = normalizeSettings({ ...settings, ...response.settings });
-        applySettings();
-        if (!settings.enabled) {
-          return;
+          if (chrome.runtime.lastError || !response) {
+            return;
+          }
+
+          settings = normalizeSettings({ ...settings, ...response.settings });
+          applySettings();
+          if (!settings.enabled) {
+            return;
+          }
+          applyStatus(response.status);
+          hydrateComments(response.comments || []);
+        } catch (error) {
+          if (isExtensionContextInvalidated(error)) {
+            deactivateStaleContext();
+          }
         }
-        applyStatus(response.status);
-        hydrateComments(response.comments || []);
       });
     } catch (error) {
       if (isExtensionContextInvalidated(error)) {
         deactivateStaleContext();
       }
+    }
+  }
+
+  function canUseRuntime() {
+    try {
+      return Boolean(chrome?.runtime?.id);
+    } catch (error) {
+      if (isExtensionContextInvalidated(error)) {
+        deactivateStaleContext();
+      }
+      return false;
     }
   }
 
@@ -464,6 +489,11 @@
     window.clearTimeout(portReconnectTimer);
     clearComments();
     stage.remove();
+    try {
+      port?.disconnect();
+    } catch (_error) {
+      // The extension context is already gone.
+    }
   }
 
   function isExtensionContextInvalidated(error) {
