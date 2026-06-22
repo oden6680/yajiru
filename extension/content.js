@@ -51,7 +51,7 @@
   badge.className = "lt-comment-overlay-badge";
   badge.hidden = true;
   stage.appendChild(badge);
-  document.documentElement.appendChild(stage);
+  attachStageToVisibleRoot();
 
   connectToBackground();
 
@@ -64,6 +64,8 @@
       requestHydration();
     }
   });
+  document.addEventListener("fullscreenchange", handleFullscreenChange);
+  document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
 
   function connectToBackground() {
     if (!active) {
@@ -228,6 +230,7 @@
   }
 
   function applySettings() {
+    attachStageToVisibleRoot();
     stage.hidden = !settings.enabled;
     if (!settings.enabled) {
       clearComments();
@@ -241,6 +244,7 @@
   }
 
   function applyStatus(status) {
+    attachStageToVisibleRoot();
     if (!settings.enabled || status?.enabled === false) {
       clearComments();
       hideBadge();
@@ -266,6 +270,7 @@
   }
 
   function showBadge(text) {
+    attachStageToVisibleRoot();
     badge.textContent = text;
     badge.hidden = false;
   }
@@ -275,6 +280,7 @@
   }
 
   function enqueueComment(comment) {
+    attachStageToVisibleRoot();
     if (activeComments.length >= settings.maxComments) {
       queue.push(comment);
       return;
@@ -322,6 +328,7 @@
   }
 
   function spawnComment(comment, { restorePosition = false } = {}) {
+    attachStageToVisibleRoot();
     const stageRect = stage.getBoundingClientRect();
     const stageWidth = stageRect.width || window.innerWidth;
     const stageHeight = stageRect.height || window.innerHeight;
@@ -476,12 +483,32 @@
     return `${(value >> 16) & 255} ${(value >> 8) & 255} ${value & 255}`;
   }
 
+  function handleFullscreenChange() {
+    attachStageToVisibleRoot();
+    if (settings.enabled) {
+      requestHydration();
+    }
+  }
+
+  function attachStageToVisibleRoot() {
+    const root = fullscreenElement() || document.documentElement;
+    if (stage.parentElement !== root) {
+      root.appendChild(stage);
+    }
+  }
+
+  function fullscreenElement() {
+    return document.fullscreenElement || document.webkitFullscreenElement || null;
+  }
+
   function shutdown() {
     active = false;
     window.clearTimeout(portReconnectTimer);
     clearComments();
     stage.remove();
     port?.disconnect();
+    document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
   }
 
   function deactivateStaleContext() {
@@ -489,6 +516,8 @@
     window.clearTimeout(portReconnectTimer);
     clearComments();
     stage.remove();
+    document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
     try {
       port?.disconnect();
     } catch (_error) {
