@@ -27,10 +27,13 @@ const SWATCH_COLORS = [
 const form = document.getElementById("settingsForm");
 const statusText = document.getElementById("statusText");
 const saveStatus = document.getElementById("saveStatus");
+const copyCommandButton = document.getElementById("copyCommandButton");
 const reconnectButton = document.getElementById("reconnectButton");
 const previewButton = document.getElementById("previewButton");
 const clearButton = document.getElementById("clearButton");
 const previewText = document.getElementById("previewText");
+
+let currentCommand = "";
 
 function sendToBackground(message) {
   return chrome.runtime.sendMessage(message);
@@ -82,6 +85,7 @@ function showSaveStatus(text) {
 }
 
 function renderStatus(status) {
+  currentCommand = status?.enabled && status?.code ? `/lt start ${status.code}` : "";
   updateControls(status);
 
   if (!status) {
@@ -123,9 +127,31 @@ function updatePreview() {
 
 function updateControls(status) {
   const enabled = Boolean(status?.enabled ?? form.enabled?.checked);
+  copyCommandButton.disabled = !currentCommand;
   previewButton.disabled = !enabled;
   clearButton.disabled = !enabled;
   reconnectButton.disabled = !enabled;
+}
+
+async function copyText(text) {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch (_error) {
+      // Fall back to a temporary textarea below.
+    }
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand("copy");
+  textarea.remove();
 }
 
 function hexToRgba(color, alpha) {
@@ -170,6 +196,19 @@ async function refresh() {
 }
 
 form.addEventListener("input", updatePreview);
+
+copyCommandButton.addEventListener("click", async () => {
+  if (!currentCommand) {
+    return;
+  }
+
+  try {
+    await copyText(currentCommand);
+    showSaveStatus("コピー済み");
+  } catch (_error) {
+    showSaveStatus("コピー失敗");
+  }
+});
 
 form.enabled.addEventListener("change", async () => {
   try {

@@ -23,6 +23,10 @@ header {
   margin-bottom: 10px;
 }
 
+header > div:first-child {
+  min-width: 0;
+}
+
 h1,
 h2,
 p {
@@ -71,6 +75,20 @@ p {
 #saveStatus.error {
   background: #fde8e4;
   color: #9f2d20;
+}
+
+.header-actions {
+  display: grid;
+  justify-items: end;
+  gap: 5px;
+}
+
+.copy-command {
+  min-width: 62px;
+  padding: 5px 7px;
+  border-color: #1677a7;
+  background: #fff;
+  color: #1677a7;
 }
 
 form,
